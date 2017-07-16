@@ -62,58 +62,43 @@ Theta2_grad = zeros(size(Theta2));
 %               and Theta2_grad from Part 2.
 %
 
-% Calculate unregularized J 
-X = [ones(m, 1) X];
-for i = 1:m
-    for k = 1:num_labels
-        a2 = sigmoid(X(i, :)*Theta1');
-        a2 = [ones(size(a2, 1), 1) a2];
-        H2 = sigmoid(a2*Theta2');
-        Y = zeros(1, 10);
-        Y(y(i)) = 1;
-        J = J - Y(k)*log(H2(k)) - (1-Y(k))*log(1-H2(k));
-    end
-%     J = J + (-y'*log(sigmoid(X*theta))-(1-y)'*log(1-sigmoid(X*theta)))/m + ...
-%         lambda*(sum(power(theta(2:size(theta)), 2)))/(2*m)
-end
-J = J / m;
-
-% Calculate sum Theta1^2
-[rowofTheta1, colofTheta1] = size(Theta1);
-sum1 = 0;
-for i = 1:rowofTheta1
-    for j = 2:colofTheta1
-        sum1 = sum1 + power(Theta1(i, j), 2);
-    end
+% recode y to Y
+I = eye(num_labels);
+Y = zeros(m, num_labels);
+for i=1:m
+  Y(i, :)= I(y(i), :);
 end
 
-% Calculate sum Theta2^2
-[rowofTheta2, colofTheta2] = size(Theta2);
-sum2 = 0;
-for i = 1:rowofTheta2
-    for j = 2:colofTheta2
-        sum2 = sum2 + power(Theta2(i, j), 2);
-    end
-end
+% feedforward
+a1 = [ones(m, 1) X];
+z2 = a1*Theta1';
+a2 = [ones(size(z2, 1), 1) sigmoid(z2)];
+z3 = a2*Theta2';
+a3 = sigmoid(z3);
+h = a3;
 
-% Calculate regularized J
-J = J + lambda*(sum1 + sum2) / (2*m);
+% calculte penalty
+p = sum(sum(Theta1(:, 2:end).^2, 2))+sum(sum(Theta2(:, 2:end).^2, 2));
 
-% Calculate grad
-for t = 1:m
-    z2 = X(t,:)*Theta1';
-    a2 = sigmoid(z2);
-    a2 = [1 a2];
-    z3 = a2*Theta2';
-    a3 = sigmoid(z3);
-    Y = zeros(1, 10);
-    Y(y(t)) = 1;
-    delta3 = a3 == Y;
-    delta2 = Theta2' * delta3 .* sigmoidGradient(a2*Theta2');
-end
+% calculate J
+J = sum(sum((-Y).*log(h) - (1-Y).*log(1-h), 2))/m + lambda*p/(2*m);
 
+% calculate sigmas
+sigma3 = a3 - Y;
+sigma2 = (sigma3*Theta2).*sigmoidGradient([ones(size(z2, 1), 1) z2]);
+sigma2 = sigma2(:, 2:end);
 
+% accumulate gradients
+delta_1 = (sigma2'*a1);
+delta_2 = (sigma3'*a2);
 
+% calculate regularized gradient
+p1 = (lambda/m)*[zeros(size(Theta1, 1), 1) Theta1(:, 2:end)];
+p2 = (lambda/m)*[zeros(size(Theta2, 1), 1) Theta2(:, 2:end)];
+Theta1_grad = delta_1./m + p1;
+Theta2_grad = delta_2./m + p2;
+
+% 
 % -------------------------------------------------------------
 
 % =========================================================================
